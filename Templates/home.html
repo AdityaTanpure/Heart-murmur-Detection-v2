@@ -131,6 +131,63 @@
         .college-info { font-size: 14px; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 20px; }
 
         footer { text-align: center; padding: 30px; background-color: rgba(0,0,0,0.3); color: var(--text-muted); font-size: 12px; }
+
+        /* ================= MOBILE RESPONSIVE ================= */
+
+@media (max-width:992px){
+
+    .project-highlight-box{
+        flex-direction:column;
+    }
+
+    .grid-3{
+        grid-template-columns:1fr 1fr;
+    }
+}
+
+@media (max-width:768px){
+
+    .navbar{
+        flex-direction:column;
+        gap:15px;
+        padding:15px;
+        text-align:center;
+    }
+
+    .nav-links{
+        flex-wrap:wrap;
+        justify-content:center;
+        gap:10px;
+    }
+
+    .grid-2,
+    .grid-3{
+        grid-template-columns:1fr;
+    }
+
+    .hero h1{
+        font-size:30px;
+    }
+
+    .project-text h2{
+        font-size:24px;
+    }
+
+    .team-box{
+        padding:20px;
+    }
+}
+
+@media (max-width:480px){
+
+    .hero h1{
+        font-size:24px;
+    }
+
+    .hero p{
+        font-size:15px;
+    }
+}
     </style>
 </head>
 <body>
@@ -146,7 +203,7 @@
             <a href="#team">Our Team</a>
             
             {% if session.get('logged_in') %}
-                <span class="nav-user">👤 {{ session.get('user') }}</span>
+                <span class="nav-user">👤 {{ session.get('full_name') }}</span>
                 <a href="/logout" style="margin-left: 15px; color: var(--accent-pink); font-weight: bold; text-decoration: none;">Logout</a>
             {% else %}
                 <div style="margin-left: 15px; border-left: 1px solid var(--border-color); padding-left: 20px;">

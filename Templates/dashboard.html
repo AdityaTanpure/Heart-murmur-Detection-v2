@@ -6,8 +6,7 @@
     <title>Diagnostic Dashboard - Murmur Detect</title>
     
     <script src="https://unpkg.com/wavesurfer.js@7"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    
+   
     <style>
         :root {
             --bg-base: #0b0f19;
@@ -114,20 +113,105 @@
         img.spectrogram { width: 100%; border-radius: 8px; border: 1px solid var(--border-color); }
 
         /* PDF CUSTOM STYLES */
-        .pdf-patient-info { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; padding: 15px; background: #1f2937; border-radius: 8px; border: 1px solid #374151; }
+        .pdf-patient-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    color: black;
+}
         .pdf-patient-info div { font-size: 14px; }
         .pdf-patient-info strong { color: var(--accent-orange); }
+
+        /* ================= RESPONSIVE ================= */
+
+@media (max-width:992px){
+
+    .container{
+        padding:20px;
+    }
+
+    .form-row{
+        grid-template-columns:1fr;
+    }
+
+    .upload-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+@media (max-width:768px){
+
+    .navbar{
+        flex-direction:column;
+        gap:15px;
+        padding:15px;
+        text-align:center;
+    }
+
+    .nav-links{
+        flex-wrap:wrap;
+        justify-content:center;
+    }
+
+    .radio-group{
+        flex-direction:column;
+    }
+
+    .pdf-patient-info{
+        grid-template-columns:1fr;
+    }
+
+    .page-header h1{
+        font-size:26px;
+    }
+
+    .history-table{
+        min-width:700px;
+    }
+
+    .upload-box-container{
+        width:100%;
+    }
+}
+
+@media (max-width:480px){
+
+    .page-header h1{
+        font-size:22px;
+    }
+
+    .panel{
+        padding:15px;
+    }
+
+    .btn-submit{
+        font-size:15px;
+    }
+
+    .container{
+        padding:10px;
+    }
+}
     </style>
 </head>
 <body>
 
     <nav class="navbar">
         <a href="/" class="nav-brand">❤️ Murmur Detection</a>
-        <div class="nav-links">
-            <a href="/">Home</a>
-            <span class="nav-user">👤 {{ user }}</span>
-            <a href="/logout" style="margin-left: 15px; color: var(--accent-pink); font-weight: bold;">Logout</a>
-        </div>
+       <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/analytics">📊 Analytics</a>
+    <span class="nav-user">👤 {{ full_name }}</span>
+    <a href="/logout"
+       style="margin-left: 15px; color: var(--accent-pink); font-weight: bold;">
+       Logout
+    </a>
+</div>
     </nav>
 
     <div class="container">
@@ -265,25 +349,50 @@
         {% if result %}
             <div class="section-title" style="justify-content: space-between;">
                 <span>📝 4. Diagnostic Results</span>
-                <button onclick="downloadPDF()" style="background: var(--bg-panel); color: white; border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px;">📄 Download PDF Report</button>
-            </div>
+                <a href="/download_report?
+patient_name={{ request.form.get('patient_name') }}&
+patient_age={{ request.form.get('patient_age') }}&
+patient_gender={{ request.form.get('patient_gender') }}&
+result={{ result }}"
+style="
+background:#1f2937;
+padding:10px 15px;
+border-radius:6px;
+text-decoration:none;
+color:white;
+border:1px solid #374151;
+">
+📄 Download PDF Report
+</a></div>
             
-            <div id="pdf-report-area" style="background-color: var(--bg-base); padding: 30px; border-radius: 8px; border: 1px solid var(--border-color);">
-                <h2 style="color: white; text-align: center; border-bottom: 2px solid var(--accent-pink); padding-bottom: 10px; margin-top: 0;">CardioDetect Medical Analysis</h2>
-                
+            <div id="pdf-report-area" style="background-color: white; color: black; padding: 30px; border-radius: 8px; border: 1px solid #d1d5db;">
+
+    <h2 style="color: black; text-align: center; border-bottom: 2px solid #ff4d6d; padding-bottom: 10px; margin-top: 0;">
+        CardioDetect Medical Analysis
+    </h2>
                 <div class="pdf-patient-info">
                     <div><strong>Patient:</strong> {{ request.form.get('patient_name') }}</div>
                     <div><strong>Age:</strong> {{ request.form.get('patient_age') }}</div>
                     <div><strong>Gender:</strong> {{ request.form.get('patient_gender') }}</div>
                 </div>
 
-                <div class="result-box {% if '🔴' in result %}murmur{% endif %}">
+                <div style="
+background:#ffffff;
+color:#000000;
+padding:20px;
+border-radius:10px;
+border:2px solid #d1d5db;
+margin-top:20px;
+text-align:center;
+">
                     <strong style="font-size: 1.2em;">Classification Outcome:</strong><br><br>
                     {{ result | safe }}
                 </div>
                 
                 {% if spectrograms %}
-                    <h3 style="color: white; margin-top: 30px; text-align: center;">Frequency Domain Visualizations (Mel Spectrograms)</h3>
+                    <h3 style="color: black; margin-top: 30px; text-align: center;">
+    Frequency Domain Visualizations (Mel Spectrograms)
+</h3>
                     <div class="upload-grid" style="margin-top: 15px;">
                         {% for region, img_data in spectrograms.items() %}
                             <div style="background-color: var(--bg-panel); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border-color);">
@@ -298,20 +407,41 @@
                 </p>
             </div>
 
-            <script>
-                function downloadPDF() {
-                    const element = document.getElementById('pdf-report-area');
-                    const patientName = "{{ request.form.get('patient_name') }}".replace(/\s+/g, '_');
-                    const opt = {
-                        margin: 0.5,
-                        filename: 'Report_' + patientName + '.pdf',
-                        image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, backgroundColor: '#0b0f19' },
-                        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-                    };
-                    html2pdf().set(opt).from(element).save();
-                }
-            </script>
+           <script>
+function downloadPDF() {
+
+    const element = document.getElementById("pdf-report-area");
+
+    if (!element) {
+        alert("PDF area not found");
+        return;
+    }
+
+    const opt = {
+        margin: 10,
+        filename: "Heart_Murmur_Report.pdf",
+        image: {
+            type: "jpeg",
+            quality: 1
+        },
+        html2canvas: {
+            scale: 3,
+            useCORS: true,
+            backgroundColor: "#ffffff"
+        },
+        jsPDF: {
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait"
+        }
+    };
+
+    html2pdf()
+        .set(opt)
+        .from(element)
+        .save();
+}
+</script>
         {% endif %}
 
         <div class="section-title">🕒 Patient Diagnostic History</div>
@@ -423,5 +553,6 @@
             document.getElementById(prefix + '-duration').innerText = '0:00';
         }
     </script>
+    
 </body>
 </html>

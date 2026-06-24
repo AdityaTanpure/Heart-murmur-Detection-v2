@@ -16,7 +16,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from scipy.stats import skew, kurtosis
-
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from flask import send_file
 
 # ---------------- APP SETUP ---------------- #
 app = Flask(__name__)
@@ -31,8 +33,10 @@ N_MFCC = 13
 def make_session_permanent():
     session.permanent = True
 
-UPLOAD_FOLDER = 'temp_uploads'
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'temp_uploads')
 ALLOWED_EXTENSIONS = {'wav'}
+
+# Create uploads folder if it doesn't exist
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
@@ -41,7 +45,13 @@ def allowed_file(filename):
 # ---------------- DATABASE ---------------- #
 def get_db_connection():
     db_path = os.path.join(os.getcwd(), 'database.db')
-    conn = sqlite3.connect(db_path)
+
+    conn = sqlite3.connect(
+        db_path,
+        timeout=30,
+        check_same_thread=False
+    )
+
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -211,7 +221,7 @@ def login():
             session["logged_in"] = True
             session["user"] = username
             session["full_name"] = user["full_name"]
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("home"))
         else:
             error = "❌ Invalid username or password."
     return render_template("login.html", error=error)
@@ -219,24 +229,52 @@ def login():
 @app.route("/register", methods=["GET", "POST"])
 def register():
     error = None
+
     if request.method == "POST":
+
         full_name = request.form.get("full_name")
         role = request.form.get("role")
         email = request.form.get("email")
         username = request.form.get("username")
         password = request.form.get("password")
-        conn = get_db_connection()
-        if conn.execute('SELECT * FROM users WHERE username = ? OR email = ?', (username, email)).fetchone():
-            error = "❌ Username or Email already exists."
-        else:
-            conn.execute(
-                'INSERT INTO users (full_name, role, email, username, password) VALUES (?, ?, ?, ?, ?)',
-                (full_name, role, email, username, generate_password_hash(password))
-            )
-            conn.commit()
+
+        try:
+            conn = get_db_connection()
+
+            existing = conn.execute(
+                "SELECT * FROM users WHERE username=? OR email=?",
+                (username, email)
+            ).fetchone()
+
+            if existing:
+                error = "❌ Username or Email already exists."
+
+            else:
+                conn.execute(
+                    """
+                    INSERT INTO users
+                    (full_name, role, email, username, password)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        full_name,
+                        role,
+                        email,
+                        username,
+                        generate_password_hash(password)
+                    )
+                )
+
+                conn.commit()
+
+                return redirect(url_for("login"))
+
+        except Exception as e:
+            error = str(e)
+
+        finally:
             conn.close()
-            return redirect(url_for("login"))
-        conn.close()
+
     return render_template("register.html", error=error)
 
 @app.route("/dashboard", methods=["GET", "POST"])
@@ -305,15 +343,89 @@ def dashboard():
     except Exception as e:
         print(f"❌ Database Retrieval Error: {e}")
 
-    return render_template("dashboard.html", 
-                           user=username, 
-                           result=result, 
-                           spectrograms=spectrograms, 
-                           history=history)
+    return render_template(
+    "dashboard.html",
+    user=username,
+    full_name=session.get("full_name"),
+    result=result,
+    spectrograms=spectrograms,
+    history=history
+)
+    
+    
+@app.route("/download_report")
+def download_report():
+
+    patient_name = request.args.get("patient_name", "Unknown")
+    patient_age = request.args.get("patient_age", "N/A")
+    patient_gender = request.args.get("patient_gender", "N/A")
+    result = request.args.get("result", "No Result")
+
+    pdf_path = "Heart_Murmur_Report.pdf"
+
+    doc = SimpleDocTemplate(pdf_path)
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(
+        Paragraph("Heart Murmur Detection Report", styles["Title"])
+    )
+
+    elements.append(Spacer(1, 20))
+
+    elements.append(
+        Paragraph(f"<b>Patient Name:</b> {patient_name}",
+        styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(f"<b>Age:</b> {patient_age}",
+        styles["Normal"])
+    )
+
+    elements.append(
+        Paragraph(f"<b>Gender:</b> {patient_gender}",
+        styles["Normal"])
+    )
+
+    elements.append(Spacer(1, 20))
+
+    elements.append(
+        Paragraph(
+            f"<b>Diagnostic Result:</b> {result}",
+            styles["Heading2"]
+        )
+    )
+
+    elements.append(Spacer(1, 20))
+
+    elements.append(
+        Paragraph(
+            "This report was generated automatically "
+            "using Machine Learning analysis.",
+            styles["Normal"]
+        )
+    )
+
+    doc.build(elements)
+
+    return send_file(
+        pdf_path,
+        as_attachment=True
+    )
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("home"))
+
+@app.route("/analytics")
+def analytics():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+
+    return render_template("analytics.html")
 
 # ---------------- RUN ---------------- #
 if __name__ == "__main__":
